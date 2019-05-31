@@ -70,7 +70,7 @@ def check_params(params):
 
 
 from numpy import zeros_like,size,where,atleast_1d
-def CORPSE_deriv(SOM,T,theta,params,claymod=1.0):
+def CORPSE_deriv(SOM,T,theta,params,claymod=1.0,Tref_decomp=293.15,Tref_predator=293.15):
     '''Calculate rates of change for all CORPSE pools
        T: Temperature (K)
        theta: Soil water content (fraction of saturation)
@@ -90,8 +90,8 @@ def CORPSE_deriv(SOM,T,theta,params,claymod=1.0):
     eup=params['eup']
 
     # Calculate maximum potential C decomposition rate
-    decomp=decompRate(SOM,T,theta,params)
-    predation_rate=predationRate(SOM,T,params)
+    decomp=decompRate(SOM,T,theta,params,Tref_decomp)
+    predation_rate=predationRate(SOM,T,params,Tref_predator)
 
     # Microbial turnover
     microbeTurnover=(SOM['livingMicrobeC']-params['minMicrobeC']*(sumCtypes(SOM,'u')))/params['Tmic'];   # kg/m2/yr
@@ -148,7 +148,7 @@ def CORPSE_deriv(SOM,T,theta,params,claymod=1.0):
 
 
 # Decomposition rate
-def decompRate(SOM,T,theta,params):
+def decompRate(SOM,T,theta,params,Tref):
 
     # This only really needs to be calculated once
     if params['new_resp_units']:
@@ -158,7 +158,7 @@ def decompRate(SOM,T,theta,params):
     else:
         aerobic_max=1.0
 
-    vmax=Vmax(T,params)
+    vmax=Vmax(T,params,Tref)
 
     decompRate={}
     dodecomp=(sumCtypes(SOM,'u')!=0.0)&(theta!=0.0)&(SOM['livingMicrobeC']!=0.0)
@@ -169,11 +169,11 @@ def decompRate(SOM,T,theta,params):
 
     return decompRate
 
-def Vmax(T,params):
+def Vmax(T,params,Tref):
     '''Vmax function, normalized to Tref=293.15
     T is in K'''
 
-    Tref=293.15;
+    # Tref=293.15;
     Rugas=8.314472;
 
     from numpy import exp
@@ -183,20 +183,20 @@ def Vmax(T,params):
 
 
 # Decomposition rate
-def predationRate(SOM,T,params):
+def predationRate(SOM,T,params,Tref):
 
-    vmax=Vmax_predator(T,params)
+    vmax=Vmax_predator(T,params,Tref)
 
     dopred=(SOM['livingMicrobeC']!=0.0)&(SOM['predatorC']!=0.0)
     prate=where(dopred,vmax*(SOM['livingMicrobeC'])*SOM['predatorC']/(SOM['livingMicrobeC']*params['kC_predator']+SOM['predatorC']),0.0)
 
     return prate
 
-def Vmax_predator(T,params):
+def Vmax_predator(T,params,Tref):
     '''Vmax function, normalized to Tref=293.15
     T is in K'''
 
-    Tref=293.15;
+    # Tref=293.15;
     Rugas=8.314472;
 
     from numpy import exp
